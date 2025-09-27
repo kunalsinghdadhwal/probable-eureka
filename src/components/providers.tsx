@@ -2,6 +2,8 @@
 
 import { ThirdwebProvider } from "thirdweb/react";
 import { ReactNode } from "react";
+import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
+
 
 interface ProvidersProps {
   children: ReactNode;
@@ -9,8 +11,10 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <ThirdwebProvider>
-      {children}
-    </ThirdwebProvider>
+    <MiniKitProvider>
+      <ThirdwebProvider>
+        {children}
+      </ThirdwebProvider>
+    </MiniKitProvider>
   );
 }
