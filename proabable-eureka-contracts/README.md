@@ -191,3 +191,28 @@ MIT License - see LICENSE file for details
 ## Support
 
 For questions and support, please open an issue in the repository.
+
+npx hardhat ignition deploy ignition/modules/AIAgent.js --network sepolia
+[dotenv@17.2.2] injecting env (4) from .env -- tip: ⚙️  override existing env vars with { override: true }
+✔ Confirm deploy to network sepolia (11155111)? … yes
+
+Compiled 19 Solidity files successfully (evm target: paris).
+Hardhat Ignition 🚀
+
+Deploying [ AIAgentModule ]
+
+Batch #1
+  Executed AIAgentModule#AgentStorage
+
+Batch #2
+  Executed AIAgentModule#AIAgentBatchNFT
+
+Batch #3
+  Executed AIAgentModule#AgentStorage.setMainContract
+
+[ AIAgentModule ] successfully deployed 🚀
+
+Deployed Addresses
+
+AIAgentModule#AgentStorage - 0xE39E63dF14B1b916A8aC1c777D956865BBD87218
+AIAgentModule#AIAgentBatchNFT - 0x3Adcdf52260fEbe0776B02ab031A3A68Cae50592

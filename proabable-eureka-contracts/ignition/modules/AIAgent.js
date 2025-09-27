@@ -1,7 +1,6 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 export default buildModule("AIAgentModule", (m) => {
-  // Deploy AgentStorage first
   const agentStorage = m.contract("AgentStorage", []);
 
   // Deploy AIAgentBatchNFT with AgentStorage address
