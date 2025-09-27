@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   useActiveWallet,
   useActiveAccount,
@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Copy,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 
 interface UploadedFile {
@@ -59,16 +60,47 @@ export default function UploadPage() {
     }
   };
 
-  // Copy hash to clipboard
+  // Copy hash to clipboard with better feedback
   const copyToClipboard = async (text: string) => {
+    if (!text) return;
+    
     try {
       await navigator.clipboard.writeText(text);
       setSuccess("Hash copied to clipboard!");
-      setTimeout(() => setSuccess(null), 2000);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError("Failed to copy to clipboard");
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setSuccess("Hash copied to clipboard!");
+        setTimeout(() => setSuccess(null), 3000);
+      } catch (fallbackErr) {
+        setError("Failed to copy to clipboard. Please copy manually.");
+        setTimeout(() => setError(null), 5000);
+      }
     }
   };
+
+  // Focus management for errors
+  const errorRef = useRef<HTMLDivElement>(null);
+  const firstErrorFieldRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.focus();
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (error && !file && firstErrorFieldRef.current) {
+      firstErrorFieldRef.current.focus();
+    }
+  }, [error, file]);
 
   const signAuthMessage = async () => {
     if (!account) return null;
@@ -165,14 +197,24 @@ export default function UploadPage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
+    <main className="mx-auto max-w-4xl px-6 py-16 pt-24">
+      {/* Skip to content link for screen readers */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 
+                   bg-primary text-primary-foreground px-4 py-2 rounded-md z-50"
+      >
+        Skip to main content
+      </a>
+
       <div className="mb-8 flex justify-end">
       </div>
 
-      <div className="mb-4">
-        <h1 className="text-3xl font-bold">Upload AI Dataset</h1>
+      <div id="main-content" className="mb-8">
+        <h1 className="text-3xl font-bold scroll-margin-top-24">Upload AI Dataset</h1>
         <p className="mt-2 text-muted-foreground">
-          Securely upload and encrypt your AI datasets using Lighthouse and Filecoin
+          Securely upload and encrypt your AI datasets using Lighthouse and Filecoin. 
+          Connect your wallet first to begin the upload process.
         </p>
       </div>
 
@@ -180,76 +222,122 @@ export default function UploadPage() {
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
+            <Upload className="h-5 w-5" aria-hidden="true" />
             Upload Encrypted File
           </CardTitle>
           <CardDescription>
-            Your files will be encrypted and stored on IPFS via Lighthouse
+            Your files will be encrypted and stored on IPFS via Lighthouse. 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <label htmlFor="file-upload" className="text-sm font-medium">
-              Select Dataset File
+            <label 
+              htmlFor="file-upload" 
+              className="text-sm font-medium block"
+            >
+              Select Dataset File *
             </label>
             <input
               ref={fileInputRef}
               id="file-upload"
               type="file"
               onChange={handleFileChange}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 
-                file:rounded-full file:border-0 file:text-sm file:font-semibold 
-                file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+              className="block w-full text-sm text-foreground 
+                file:mr-4 file:py-3 file:px-6 file:min-h-[44px]
+                file:rounded-md file:border file:border-input 
+                file:text-sm file:font-medium file:cursor-pointer
+                file:bg-background file:text-foreground 
+                hover:file:bg-accent hover:file:text-accent-foreground
+                focus-visible:outline-none focus-visible:ring-2 
+                focus-visible:ring-ring focus-visible:ring-offset-2
+                disabled:cursor-not-allowed disabled:opacity-50"
               accept=".json,.csv,.txt,.zip,.tar.gz,.pkl,.h5,.pt,.pth"
+              disabled={uploading}
+              aria-describedby={file ? "file-selected" : "file-help"}
+              required
             />
+            <div id="file-help" className="text-xs text-muted-foreground">
+              Maximum file size: 100MB. Supported formats: JSON, CSV, TXT, ZIP, TAR.GZ, PKL, H5, PT, PTH
+            </div>
             {file && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <File className="h-4 w-4" />
-                <span>{file.name}</span>
-                <Badge variant="secondary">{formatFileSize(file.size)}</Badge>
+              <div id="file-selected" className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-accent/50 rounded-md">
+                <File className="h-4 w-4" aria-hidden="true" />
+                <span className="font-medium">{file.name}</span>
+                <Badge variant="secondary" className="ml-auto">
+                  {formatFileSize(file.size)}
+                </Badge>
               </div>
             )}
           </div>
 
-          <Button
-            onClick={uploadEncryptedFile}
-            disabled={!file || uploading}
-            className="w-full"
-            size="lg"
-          >
-            {uploading ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                Uploading... {uploadProgress}%
-              </>
-            ) : (
-              <>
-                <Shield className="mr-2 h-4 w-4" />
-                Upload Encrypted File
-              </>
-            )}
-          </Button>
+          {!wallet || !account ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please connect your wallet to upload files. Your wallet is used to sign and encrypt your data.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Button
+              onClick={uploadEncryptedFile}
+              disabled={!file || uploading}
+              className="w-full min-h-[44px] touch-manipulation"
+              size="lg"
+              type="button"
+              aria-describedby="upload-status"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Uploading… {uploadProgress}%
+                  <span className="sr-only">Upload in progress, {uploadProgress} percent complete</span>
+                </>
+              ) : (
+                <>
+                  <Shield className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Upload Encrypted File
+                </>
+              )}
+            </Button>
+          )}
 
           {uploading && (
-            <div className="space-y-2">
+            <div className="space-y-2" id="upload-status">
               <div className="flex justify-between text-sm">
                 <span>Upload Progress</span>
-                <span>{uploadProgress}%</span>
+                <span aria-live="polite">{uploadProgress}%</span>
               </div>
-              <Progress value={uploadProgress} className="w-full" />
+              <Progress 
+                value={uploadProgress} 
+                className="w-full" 
+                aria-label={`Upload progress: ${uploadProgress}%`}
+              />
             </div>
           )}
 
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+            <Alert 
+              variant="destructive" 
+              ref={errorRef}
+              tabIndex={-1}
+              role="alert"
+              aria-live="polite"
+            >
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          
           {success && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">{success}</AlertDescription>
+            <Alert 
+              className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+              role="status"
+              aria-live="polite"
+            >
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" aria-hidden="true" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                {success}
+              </AlertDescription>
             </Alert>
           )}
         </CardContent>
@@ -260,60 +348,75 @@ export default function UploadPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <File className="h-5 w-5" />
+              <File className="h-5 w-5" aria-hidden="true" />
               Uploaded Files
+              <Badge variant="secondary" className="ml-auto">
+                {uploadedFiles.length}
+              </Badge>
             </CardTitle>
             <CardDescription>Your encrypted datasets stored on IPFS</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4" role="list" aria-label="Uploaded files">
               {uploadedFiles.map((f, index) => (
                 <div
-                  key={index}
-                  className="flex items-center justify-between rounded-lg border p-4"
+                  key={`${f.hash}-${index}`}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between 
+                           rounded-lg border p-4 gap-4"
+                  role="listitem"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <Shield className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="rounded-full bg-primary/10 p-2 flex-shrink-0">
+                      <Shield className="h-4 w-4 text-primary" aria-hidden="true" />
                     </div>
-                    <div>
-                      <p className="font-medium">{f.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {f.size} • {f.uploadedAt.toLocaleString()}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate" title={f.name}>
+                        {f.name}
                       </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          Hash: {f.hash?.substring(0, 12) || 'N/A'}...
+                      <p className="text-sm text-muted-foreground">
+                        {f.size} • <time dateTime={f.uploadedAt.toISOString()}>
+                          {f.uploadedAt.toLocaleString()}
+                        </time>
+                      </p>
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          {f.hash?.substring(0, 12) || 'N/A'}…
                         </Badge>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => copyToClipboard(f.hash || '')}
-                          className="h-6 px-2"
+                          className="h-8 px-2 min-h-[32px] touch-manipulation"
                           disabled={!f.hash}
+                          aria-label={`Copy hash for ${f.name}`}
                         >
-                          <Copy className="h-3 w-3" />
+                          <Copy className="h-3 w-3" aria-hidden="true" />
+                          <span className="sr-only">Copy hash</span>
                         </Button>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => f.url && window.open(f.url, "_blank")}
+                      onClick={() => f.url && window.open(f.url, "_blank", "noopener,noreferrer")}
                       disabled={!f.url}
+                      className="min-h-[32px] touch-manipulation"
+                      aria-label={`View ${f.name} on IPFS`}
                     >
-                      <ExternalLink className="mr-1 h-3 w-3" />
+                      <ExternalLink className="mr-1 h-3 w-3" aria-hidden="true" />
                       View
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="outline" 
                       size="sm"
-                      onClick={() => f.decryptUrl && window.open(f.decryptUrl, "_blank")}
+                      onClick={() => f.decryptUrl && window.open(f.decryptUrl, "_blank", "noopener,noreferrer")}
                       disabled={!f.decryptUrl}
+                      className="min-h-[32px] touch-manipulation"
+                      aria-label={`Decrypt and view ${f.name}`}
                     >
-                      <Shield className="mr-1 h-3 w-3" />
+                      <Shield className="mr-1 h-3 w-3" aria-hidden="true" />
                       Decrypt
                     </Button>
                   </div>
