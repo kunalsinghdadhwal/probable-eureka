@@ -39,7 +39,7 @@ export async function login(payload: VerifyLoginPayloadParams) {
                 sameSite: "strict",
                 maxAge: 60 * 60 * 24 * 7, // 7 days
             });
-            
+
             return { success: true };
         }
         return { success: false, error: "Invalid payload verification" };

@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import Navbar from "@/components/navbar"
 import "./globals.css"
 import { Suspense } from "react"
+import { ThirdwebProvider } from "thirdweb/react"
 import { Providers } from "@/components/providers"
 
 export const metadata: Metadata = {
@@ -57,6 +58,7 @@ export default function RootLayout({
           `
         }} />
       </head>
+        <Providers>
       <body 
         className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}
         style={{ 
@@ -64,7 +66,6 @@ export default function RootLayout({
           WebkitTapHighlightColor: 'transparent'
         }}
         >
-        <Providers>
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">
             <div className="animate-pulse">Loading DataChain AI…</div>
@@ -76,8 +77,9 @@ export default function RootLayout({
           </main>
         </Suspense>
         <Analytics />
-          </Providers>
+
       </body>
+      </Providers>
     </html>
   )
 }
