@@ -1,6 +1,6 @@
-const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
+import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-module.exports = buildModule("AIAgentModule", (m) => {
+export default buildModule("AIAgentModule", (m) => {
   // Deploy AgentStorage first
   const agentStorage = m.contract("AgentStorage", []);
 
