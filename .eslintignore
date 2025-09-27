@@ -1,0 +1,11 @@
+# Ignore contract files that use CommonJS
+proabable-eureka-contracts/**/*.js
+proabable-eureka-contracts/**/*.ts
+
+# Ignore build output
+.next/
+dist/
+build/
+
+# Ignore node_modules
+node_modules/

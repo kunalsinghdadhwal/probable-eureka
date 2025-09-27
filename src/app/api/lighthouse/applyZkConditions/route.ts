@@ -7,15 +7,15 @@ export const POST = async (req: NextRequest) => {
         const { cid, address, signature, conditions } = await req.json();
 
         if (!cid || !address || !signature || !conditions) {
-            return NextResponse.json({ 
-                error: "Missing required fields: cid, address, signature, conditions" 
+            return NextResponse.json({
+                error: "Missing required fields: cid, address, signature, conditions"
             }, { status: 400 });
         }
 
         // Validate conditions format
         if (!Array.isArray(conditions) || conditions.length === 0) {
-            return NextResponse.json({ 
-                error: "Conditions must be a non-empty array" 
+            return NextResponse.json({
+                error: "Conditions must be a non-empty array"
             }, { status: 400 });
         }
 
@@ -45,11 +45,13 @@ export const POST = async (req: NextRequest) => {
                     data: apidata,
                     ...config,
                 });
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error(`Error with node ${url}:`, error);
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const responseData = (error as { response?: { data?: unknown } })?.response?.data;
                 return {
                     isSuccess: false,
-                    error: error.response?.data || error.message,
+                    error: responseData || errorMessage,
                 };
             }
         };
@@ -74,15 +76,16 @@ export const POST = async (req: NextRequest) => {
             cid,
             conditions,
             results,
-            message: isOverallSuccess 
-                ? "zkTLS conditions applied successfully" 
+            message: isOverallSuccess
+                ? "zkTLS conditions applied successfully"
                 : "Failed to apply conditions to majority of nodes"
         });
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Apply zkTLS conditions error:", err);
-        return NextResponse.json({ 
-            error: err.message || "Failed to apply zkTLS conditions" 
+        const errorMessage = err instanceof Error ? err.message : "Failed to apply zkTLS conditions";
+        return NextResponse.json({
+            error: errorMessage
         }, { status: 500 });
     }
 };

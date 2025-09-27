@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import Navbar from "@/components/navbar"
 import "./globals.css"
 import { Suspense } from "react"
-import { ThirdwebProvider } from "thirdweb/react"
+
 import { Providers } from "@/components/providers"
 
 export const metadata: Metadata = {
@@ -58,43 +58,43 @@ export default function RootLayout({
           `
         }} />
       </head>
-        <Providers>
-      <body 
-        className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased relative`}
-        style={{ 
-          touchAction: 'manipulation',
-          WebkitTapHighlightColor: 'transparent'
-        }}
-        >
-        
-        {/* Global background image for all pages */}
-        <div 
-          className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
+      <Providers>
+        <body
+          className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased relative`}
           style={{
-            backgroundImage: 'url(/bg.jpg)',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent'
           }}
-          aria-hidden="true"
-        />
-        
-        {/* Global overlay for text readability */}
-        <div 
-          className="fixed inset-0 bg-background/20 dark:bg-background/40 -z-10"
-          aria-hidden="true" 
-        />
+        >
 
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-screen relative z-10">
-            <div className="animate-pulse">Loading DataChain AI…</div>
-          </div>
-        }>
-          <Navbar />
-          <main id="main-content" className="relative z-10">
-            {children} 
-          </main>
-        </Suspense>
-        <Analytics />
+          {/* Global background image for all pages */}
+          <div
+            className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
+            style={{
+              backgroundImage: 'url(/bg.jpg)',
+            }}
+            aria-hidden="true"
+          />
 
-      </body>
+          {/* Global overlay for text readability */}
+          <div
+            className="fixed inset-0 bg-background/20 dark:bg-background/40 -z-10"
+            aria-hidden="true"
+          />
+
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen relative z-10">
+              <div className="animate-pulse">Loading DataChain AI…</div>
+            </div>
+          }>
+            <Navbar />
+            <main id="main-content" className="relative z-10">
+              {children}
+            </main>
+          </Suspense>
+          <Analytics />
+
+        </body>
       </Providers>
     </html>
   )
