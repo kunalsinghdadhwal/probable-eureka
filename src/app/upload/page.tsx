@@ -71,13 +71,19 @@ export default function UploadPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [zkConditionsOpen, setZkConditionsOpen] = useState(false);
-  const [selectedFileForConditions, setSelectedFileForConditions] = useState<UploadedFile | null>(null);
+  const [selectedFileForConditions, setSelectedFileForConditions] =
+    useState<UploadedFile | null>(null);
   const [zkConditions, setZkConditions] = useState<ZkCondition[]>([
-    { id: 1, method: "City", returnValueTest: { comparator: "==", value: "New York" } }
+    {
+      id: 1,
+      method: "City",
+      returnValueTest: { comparator: "==", value: "New York" },
+    },
   ]);
   const [applyingConditions, setApplyingConditions] = useState(false);
   const [zkProofDialog, setZkProofDialog] = useState(false);
-  const [selectedFileForAccess, setSelectedFileForAccess] = useState<UploadedFile | null>(null);
+  const [selectedFileForAccess, setSelectedFileForAccess] =
+    useState<UploadedFile | null>(null);
   const [zkProof, setZkProof] = useState("");
   const [verifyingProof, setVerifyingProof] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,7 +104,7 @@ export default function UploadPage() {
   // Copy hash to clipboard with better feedback
   const copyToClipboard = async (text: string) => {
     if (!text) return;
-    
+
     try {
       await navigator.clipboard.writeText(text);
       setSuccess("Hash copied to clipboard!");
@@ -121,21 +127,43 @@ export default function UploadPage() {
     }
   };
 
-  // Focus management for errors
+  // Focus management for errors with better UX
   const errorRef = useRef<HTMLDivElement>(null);
   const firstErrorFieldRef = useRef<HTMLInputElement>(null);
+  const uploadButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
       errorRef.current.focus();
     }
   }, [error]);
 
   useEffect(() => {
-    if (error && !file && firstErrorFieldRef.current) {
-      firstErrorFieldRef.current.focus();
+    if (success && uploadButtonRef.current) {
+      uploadButtonRef.current.focus();
     }
-  }, [error, file]);
+  }, [success]);
+
+  // Keyboard navigation enhancement
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Escape key to close dialogs
+      if (event.key === "Escape") {
+        if (zkConditionsOpen) {
+          setZkConditionsOpen(false);
+          event.preventDefault();
+        } else if (zkProofDialog) {
+          setZkProofDialog(false);
+          setZkProof("");
+          event.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [zkConditionsOpen, zkProofDialog]);
 
   const signAuthMessage = async () => {
     if (!account) return null;
@@ -144,7 +172,7 @@ export default function UploadPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: account.address }),
-      }).then(res => res.json());
+      }).then((res) => res.json());
 
       const signature = await account.signMessage({ message: data.message });
       return { signature, signerAddress: account.address };
@@ -183,7 +211,8 @@ export default function UploadPage() {
       xhr.open("POST", "/api/upload", true);
 
       xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        if (e.lengthComputable)
+          setUploadProgress(Math.round((e.loaded / e.total) * 100));
       };
 
       const uploadResult: any = await new Promise((resolve, reject) => {
@@ -192,7 +221,9 @@ export default function UploadPage() {
             const result = JSON.parse(xhr.responseText);
             resolve(result);
           } else {
-            reject(new Error(JSON.parse(xhr.responseText).error || "Upload failed"));
+            reject(
+              new Error(JSON.parse(xhr.responseText).error || "Upload failed")
+            );
           }
         };
         xhr.onerror = () => reject(new Error("Network error"));
@@ -210,7 +241,7 @@ export default function UploadPage() {
         hasZkConditions: false,
       };
 
-      setUploadedFiles(prev => [newUploadedFile, ...prev]);
+      setUploadedFiles((prev) => [newUploadedFile, ...prev]);
       setSuccess("File uploaded successfully!");
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -248,9 +279,9 @@ export default function UploadPage() {
 
       if (result.success) {
         // Update the file to mark it as having zkTLS conditions
-        setUploadedFiles(prev => 
-          prev.map(f => 
-            f.hash === selectedFileForConditions.hash 
+        setUploadedFiles((prev) =>
+          prev.map((f) =>
+            f.hash === selectedFileForConditions.hash
               ? { ...f, hasZkConditions: true }
               : f
           )
@@ -302,9 +333,11 @@ export default function UploadPage() {
       if (result.success) {
         // Create a download link for the decrypted file
         const decryptedData = atob(result.decryptedData);
-        const blob = new Blob([new Uint8Array(decryptedData.split('').map(c => c.charCodeAt(0)))]);
+        const blob = new Blob([
+          new Uint8Array(decryptedData.split("").map((c) => c.charCodeAt(0))),
+        ]);
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = selectedFileForAccess.name;
         a.click();
@@ -326,24 +359,37 @@ export default function UploadPage() {
 
   // Add new condition
   const addCondition = () => {
-    const newId = Math.max(...zkConditions.map(c => c.id), 0) + 1;
+    const newId = Math.max(...zkConditions.map((c) => c.id), 0) + 1;
     setZkConditions([
       ...zkConditions,
-      { id: newId, method: "", returnValueTest: { comparator: "==", value: "" } }
+      {
+        id: newId,
+        method: "",
+        returnValueTest: { comparator: "==", value: "" },
+      },
     ]);
   };
 
   // Update condition
   const updateCondition = (id: number, field: string, value: string) => {
-    setZkConditions(prev =>
-      prev.map(condition => {
+    setZkConditions((prev) =>
+      prev.map((condition) => {
         if (condition.id === id) {
-          if (field === 'method') {
+          if (field === "method") {
             return { ...condition, method: value };
-          } else if (field === 'comparator') {
-            return { ...condition, returnValueTest: { ...condition.returnValueTest, comparator: value } };
-          } else if (field === 'value') {
-            return { ...condition, returnValueTest: { ...condition.returnValueTest, value } };
+          } else if (field === "comparator") {
+            return {
+              ...condition,
+              returnValueTest: {
+                ...condition.returnValueTest,
+                comparator: value,
+              },
+            };
+          } else if (field === "value") {
+            return {
+              ...condition,
+              returnValueTest: { ...condition.returnValueTest, value },
+            };
           }
         }
         return condition;
@@ -354,24 +400,26 @@ export default function UploadPage() {
   // Remove condition
   const removeCondition = (id: number) => {
     if (zkConditions.length > 1) {
-      setZkConditions(prev => prev.filter(c => c.id !== id));
+      setZkConditions((prev) => prev.filter((c) => c.id !== id));
     }
   };
 
-  // File size formatting helper
+  // File size formatting helper with non-breaking spaces
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) return "0\u00A0Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return (
+      parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + "\u00A0" + sizes[i]
+    );
   };
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-16 pt-24">
       {/* Skip to content link for screen readers */}
-      <a 
-        href="#main-content" 
+      <a
+        href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 
                    bg-primary text-primary-foreground px-4 py-2 rounded-md z-50"
       >
@@ -379,11 +427,12 @@ export default function UploadPage() {
       </a>
 
       <div id="main-content" className="mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent scroll-margin-top-24">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent scroll-mt-24">
           AI Dataset Storage with zkTLS
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Securely upload, encrypt, and control access to your AI datasets using Lighthouse and zkTLS zero-knowledge proofs
+          Securely upload and control access to your AI datasets using zkTLS
+          proofs.
         </p>
         <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
@@ -401,105 +450,129 @@ export default function UploadPage() {
         </div>
       </div>
 
-      {/* Wallet Connection Section */}
-      {!account && (
-        <Card className="mb-8 border-2 border-amber-200 bg-amber-50">
-          <CardContent className="p-6 text-center">
-            <div className="mx-auto w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-              <Key className="h-8 w-8 text-amber-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-amber-900 mb-2">Connect Your Wallet</h3>
-            <p className="text-amber-800 mb-4">
-              You need to connect your wallet to upload encrypted files and manage zkTLS access conditions.
-            </p>
-            <ConnectButton client={client} />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Upload Section */}
-      <Card className="mb-8 border-2 border-dashed border-blue-200 hover:border-blue-300 transition-colors">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <Upload className="h-8 w-8 text-blue-600" />
+      <div className="mb-8 bg-black/90 backdrop-blur-md rounded-2xl border border-gray-800/50 shadow-xl shadow-black/30">
+        <div className="text-center p-8 pb-6">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-gray-800/80 to-gray-900/90 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 shadow-lg border border-gray-700/50">
+            <Upload className="h-8 w-8 text-gray-200 drop-shadow-sm" />
           </div>
-          <CardTitle className="text-2xl">Upload Encrypted Dataset</CardTitle>
-          <CardDescription className="text-base">
-            Your files will be encrypted client-side and stored on IPFS via Lighthouse. 
-            Add zkTLS conditions for granular access control.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-100 drop-shadow-md">
+            Upload Dataset
+          </h2>
+          <p className="text-base text-gray-300 mt-2">
+            Encrypt and store files on IPFS with zkTLS access control.
+          </p>
+        </div>
+        <div className="px-8 pb-8 space-y-6">
+          <div className="space-y-6">
             <div className="text-center">
-              <label htmlFor="file-upload" className="block text-lg font-medium mb-2">
-                Select AI Dataset File
+              <label
+                htmlFor="file-upload"
+                className="block text-lg font-semibold mb-2 text-gray-100 drop-shadow-sm"
+              >
+                Select Dataset File
               </label>
-              <p className="text-sm text-muted-foreground mb-4">
-                Supported formats: JSON, CSV, TXT, ZIP, TAR.GZ, PKL, H5, PT, PTH
-              </p>
             </div>
-            <div className="relative">
+
+            <div className="flex flex-col items-center space-y-4">
               <input
                 ref={fileInputRef}
                 id="file-upload"
+                name="dataset-file"
                 type="file"
                 onChange={handleFileChange}
-                className="block w-full text-sm text-foreground 
-                  file:mr-4 file:py-3 file:px-6 file:min-h-[44px]
-                  file:rounded-lg file:border-0 file:text-sm file:font-semibold 
-                  file:bg-gradient-to-r file:from-blue-600 file:to-purple-600 file:text-white 
-                  hover:file:from-blue-700 hover:file:to-purple-700 file:cursor-pointer
-                  cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-8 text-center
-                  hover:border-blue-400 transition-colors
-                  focus-visible:outline-none focus-visible:ring-2 
-                  focus-visible:ring-ring focus-visible:ring-offset-2
-                  disabled:cursor-not-allowed disabled:opacity-50"
+                className="sr-only"
+                style={{
+                  WebkitTapHighlightColor: "rgba(59, 130, 246, 0.1)",
+                  touchAction: "manipulation",
+                }}
                 accept=".json,.csv,.txt,.zip,.tar.gz,.pkl,.h5,.pt,.pth"
                 disabled={uploading}
                 aria-describedby={file ? "file-selected" : "file-help"}
-                required
+                autoComplete="off"
               />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500 font-medium">Click to select file or drag & drop</p>
-                </div>
+
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-base font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-gray-900 min-h-[48px] touch-manipulation shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/50"
+                style={{
+                  WebkitTapHighlightColor: "rgba(59, 130, 246, 0.1)",
+                  touchAction: "manipulation",
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Upload className="h-5 w-5" aria-hidden="true" />
+                Choose File
+              </button>
+
+              <div id="file-help" className="sr-only">
+                Upload your dataset file. Supported formats: JSON, CSV, TXT,
+                ZIP, PKL, H5, PT, PTH.
               </div>
             </div>
+
             {file && (
-              <div id="file-selected" className="flex items-center justify-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                <File className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-green-800">{file.name}</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
+              <div
+                id="file-selected"
+                className="flex items-center justify-center gap-3 p-4 bg-gray-900/80 backdrop-blur-sm rounded-lg border border-gray-700/50 shadow-lg"
+                role="status"
+                aria-live="polite"
+              >
+                <File
+                  className="h-5 w-5 text-gray-300 drop-shadow-sm"
+                  aria-hidden="true"
+                />
+                <span className="font-medium text-gray-100 drop-shadow-sm">
+                  {file.name}
+                </span>
+                <div className="bg-green-600/80 backdrop-blur-sm text-green-100 px-2 py-1 rounded text-sm font-medium">
                   {formatFileSize(file.size)}
-                </Badge>
+                </div>
               </div>
             )}
           </div>
 
           <div className="space-y-4">
             {!wallet || !account ? (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Please connect your wallet to upload files. Your wallet is used to sign and encrypt your data.
-                </AlertDescription>
-              </Alert>
+              <div
+                className="bg-amber-600/20 backdrop-blur-sm border border-amber-500/50 rounded-lg p-4"
+                role="alert"
+                aria-live="polite"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle
+                    className="h-5 w-5 text-amber-300 drop-shadow-sm"
+                    aria-hidden="true"
+                  />
+                  <span className="text-gray-200">
+                    Connect your wallet to upload files.
+                  </span>
+                </div>
+              </div>
             ) : (
-              <Button
+              <button
+                ref={uploadButtonRef}
                 onClick={uploadEncryptedFile}
                 disabled={!file || uploading}
-                className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 min-h-[44px] touch-manipulation"
-                size="lg"
+                className="w-full min-h-[48px] text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-gray-900 touch-manipulation shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-gray-700/50"
+                style={{
+                  WebkitTapHighlightColor: "rgba(59, 130, 246, 0.1)",
+                  touchAction: "manipulation",
+                }}
                 type="button"
-                aria-describedby="upload-status"
+                aria-describedby={uploading ? "upload-status" : undefined}
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="mr-3 h-5 w-5 animate-spin" aria-hidden="true" />
-                    Encrypting & Uploading... {uploadProgress}%
-                    <span className="sr-only">Upload in progress, {uploadProgress} percent complete</span>
+                    <Loader2
+                      className="mr-3 h-5 w-5 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Upload & Encrypt Dataset ({uploadProgress}%)
+                    <span className="sr-only">
+                      Upload in progress, {uploadProgress} percent complete
+                    </span>
                   </>
                 ) : (
                   <>
@@ -507,128 +580,172 @@ export default function UploadPage() {
                     Upload & Encrypt Dataset
                   </>
                 )}
-              </Button>
+              </button>
             )}
 
             {uploading && (
-              <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200" id="upload-status">
+              <div
+                className="space-y-3 p-4 bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/50 shadow-lg"
+                id="upload-status"
+                role="status"
+                aria-live="polite"
+              >
                 <div className="flex justify-between text-sm font-medium">
-                  <span className="text-blue-800">Encryption & Upload Progress</span>
-                  <span className="text-blue-600" aria-live="polite">{uploadProgress}%</span>
+                  <span className="text-gray-200">Upload Progress</span>
+                  <span
+                    className="text-gray-100 tabular-nums"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                  >
+                    {uploadProgress}%
+                  </span>
                 </div>
-                <Progress 
-                  value={uploadProgress} 
-                  className="w-full h-2" 
+                <Progress
+                  value={uploadProgress}
+                  className="w-full h-2"
                   aria-label={`Upload progress: ${uploadProgress}%`}
                 />
-                <p className="text-xs text-blue-600 text-center">
-                  Your file is being encrypted and uploaded to IPFS via Lighthouse
+                <p className="text-xs text-gray-300 text-center">
+                  Encrypting and uploading to IPFS
                 </p>
               </div>
             )}
           </div>
 
           {error && (
-            <Alert 
-              variant="destructive" 
+            <div
               ref={errorRef}
               tabIndex={-1}
               role="alert"
               aria-live="polite"
+              className="bg-red-900/40 backdrop-blur-sm border border-red-700/50 rounded-xl p-4"
             >
-              <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+              <div className="flex items-center gap-3">
+                <AlertCircle
+                  className="h-5 w-5 text-red-400 drop-shadow-sm"
+                  aria-hidden="true"
+                />
+                <span className="text-gray-200">{error}</span>
+              </div>
+            </div>
           )}
-          
+
           {success && (
-            <Alert 
-              className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+            <div
+              className="bg-green-900/40 backdrop-blur-sm border border-green-700/50 rounded-xl p-4"
               role="status"
               aria-live="polite"
             >
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" aria-hidden="true" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                {success}
-              </AlertDescription>
-            </Alert>
+              <div className="flex items-center gap-3">
+                <CheckCircle
+                  className="h-5 w-5 text-green-400 drop-shadow-sm"
+                  aria-hidden="true"
+                />
+                <span className="text-gray-200">{success}</span>
+              </div>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Uploaded Files */}
       {uploadedFiles.length > 0 && (
-        <Card className="border-2">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <File className="h-6 w-6 text-blue-600" />
+        <div className="bg-black/90 backdrop-blur-md rounded-2xl border border-gray-800/50 shadow-xl shadow-black/30">
+          <div className="bg-gradient-to-r from-gray-900/90 to-gray-900/60 backdrop-blur-sm rounded-t-2xl p-6 border-b border-gray-800/50">
+            <div className="flex items-center gap-3 text-xl mb-2">
+              <div className="p-2 bg-gradient-to-br from-gray-800/80 to-gray-900/90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700/50">
+                <File className="h-6 w-6 text-gray-200 drop-shadow-sm" />
               </div>
-              Your Encrypted Datasets
-              <Badge variant="secondary" className="ml-auto">
+              <h2 className="font-bold text-gray-100 drop-shadow-md">
+                Your Datasets
+              </h2>
+              <div className="ml-auto bg-gray-800/80 backdrop-blur-sm text-gray-100 px-2 py-1 rounded-lg text-sm font-medium shadow-md border border-gray-700/50">
                 {uploadedFiles.length}
-              </Badge>
-            </CardTitle>
-            <CardDescription className="text-base">
-              Manage your encrypted datasets and configure zkTLS access conditions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
+              </div>
+            </div>
+            <p className="text-base text-gray-300">
+              Manage encrypted datasets and configure access conditions.
+            </p>
+          </div>
+          <div className="p-6">
             <div className="grid gap-4" role="list" aria-label="Uploaded files">
               {uploadedFiles.map((f, index) => (
-                <div
+                <article
                   key={`${f.hash}-${index}`}
-                  className="group relative rounded-xl border-2 p-6 hover:shadow-lg transition-all duration-200 bg-white"
+                  className="group relative rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-gray-900/60 backdrop-blur-sm border border-gray-800/50 shadow-lg focus-within:ring-2 focus-within:ring-gray-600/50 focus-within:ring-offset-2 focus-within:ring-offset-gray-900"
                   role="listitem"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
-                      <div className={`p-3 rounded-xl ${f.hasZkConditions ? 'bg-green-100' : 'bg-blue-100'}`}>
+                      <div
+                        className={`p-3 rounded-xl backdrop-blur-sm shadow-lg border ${
+                          f.hasZkConditions
+                            ? "bg-green-800/40 border-green-600/50"
+                            : "bg-blue-800/40 border-blue-600/50"
+                        }`}
+                        aria-hidden="true"
+                      >
                         {f.hasZkConditions ? (
-                          <Lock className="h-6 w-6 text-green-600" />
+                          <Lock className="h-6 w-6 text-green-300 drop-shadow-sm" />
                         ) : (
-                          <Shield className="h-6 w-6 text-blue-600" />
+                          <Shield className="h-6 w-6 text-blue-300 drop-shadow-sm" />
                         )}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{f.name}</h3>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <h3 className="text-lg font-semibold text-gray-100 drop-shadow-md truncate">
+                            {f.name}
+                          </h3>
                           {f.hasZkConditions ? (
-                            <Badge className="bg-green-100 text-green-800 border-green-200">
-                              <Lock className="h-3 w-3 mr-1" />
+                            <div className="bg-green-800/40 backdrop-blur-sm text-green-200 border border-green-600/50 px-2 py-1 rounded-md text-sm font-medium shrink-0 shadow-md">
+                              <Lock
+                                className="h-3 w-3 mr-1 inline"
+                                aria-hidden="true"
+                              />
                               zkTLS Protected
-                            </Badge>
+                            </div>
                           ) : (
-                            <Badge variant="outline" className="text-blue-600 border-blue-200">
-                              <Shield className="h-3 w-3 mr-1" />
+                            <div className="bg-blue-800/40 backdrop-blur-sm text-blue-200 border border-blue-600/50 px-2 py-1 rounded-md text-sm font-medium shrink-0 shadow-md">
+                              <Shield
+                                className="h-3 w-3 mr-1 inline"
+                                aria-hidden="true"
+                              />
                               Encrypted
-                            </Badge>
+                            </div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-3">
-                          {f.size} • <time dateTime={f.uploadedAt.toISOString()}>
+                        <p className="text-sm text-gray-300 mb-3">
+                          <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                            {f.size}
+                          </span>{" "}
+                          •{" "}
+                          <time dateTime={f.uploadedAt.toISOString()}>
                             {f.uploadedAt.toLocaleString()}
                           </time>
                         </p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs font-mono">
-                            CID: {f.hash?.substring(0, 16) || 'N/A'}...
-                          </Badge>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="bg-gray-800/60 backdrop-blur-sm text-gray-200 border border-gray-700/50 px-2 py-1 rounded text-xs font-mono break-all shadow-md">
+                            CID: {f.hash?.substring(0, 16) || "N/A"}…
+                          </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(f.hash || '')}
-                            className="h-6 px-2 text-gray-500 hover:text-gray-700 min-h-[32px] touch-manipulation"
+                            onClick={() => copyToClipboard(f.hash || "")}
+                            className="h-8 px-3 text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 min-h-[44px] touch-manipulation"
+                            style={{
+                              WebkitTapHighlightColor:
+                                "rgba(156, 163, 175, 0.1)",
+                              touchAction: "manipulation",
+                            }}
                             disabled={!f.hash}
                             aria-label={`Copy hash for ${f.name}`}
                           >
-                            <Copy className="h-3 w-3" />
-                            <span className="sr-only">Copy hash</span>
+                            <Copy className="h-3 w-3 mr-1" aria-hidden="true" />
+                            Copy
                           </Button>
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0 flex-wrap">
                       <Button
                         variant={f.hasZkConditions ? "default" : "outline"}
                         size="sm"
@@ -637,13 +754,20 @@ export default function UploadPage() {
                           setZkConditionsOpen(true);
                         }}
                         disabled={!account}
-                        className={`${f.hasZkConditions 
-                          ? 'bg-green-600 hover:bg-green-700 text-white' 
-                          : 'border-blue-300 text-blue-600 hover:bg-blue-50'
-                        } min-h-[32px] touch-manipulation`}
+                        className={`${
+                          f.hasZkConditions
+                            ? "bg-green-700 hover:bg-green-800 text-green-100 border border-green-600/50"
+                            : "border-blue-600/50 text-blue-300 hover:bg-blue-900/30 hover:border-blue-500/50"
+                        } min-h-[44px] touch-manipulation px-4`}
+                        style={{
+                          WebkitTapHighlightColor: f.hasZkConditions
+                            ? "rgba(34, 197, 94, 0.1)"
+                            : "rgba(59, 130, 246, 0.1)",
+                          touchAction: "manipulation",
+                        }}
                       >
-                        <Settings className="mr-2 h-4 w-4" />
-                        {f.hasZkConditions ? "Manage Access" : "Set zkTLS Access"}
+                        <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
+                        {f.hasZkConditions ? "Manage Access" : "Set Access"}
                       </Button>
                       {f.hasZkConditions && (
                         <Button
@@ -654,70 +778,101 @@ export default function UploadPage() {
                             setZkProofDialog(true);
                           }}
                           disabled={!account}
-                          className="border-purple-300 text-purple-600 hover:bg-purple-50 min-h-[32px] touch-manipulation"
+                          className="border-purple-600/50 text-purple-300 hover:bg-purple-900/30 hover:border-purple-500/50 min-h-[44px] touch-manipulation px-4"
+                          style={{
+                            WebkitTapHighlightColor: "rgba(168, 85, 247, 0.1)",
+                            touchAction: "manipulation",
+                          }}
                         >
-                          <Key className="mr-2 h-4 w-4" />
+                          <Key className="mr-2 h-4 w-4" aria-hidden="true" />
                           Access File
                         </Button>
                       )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => f.url && window.open(f.url, "_blank", "noopener,noreferrer")}
+                        onClick={() =>
+                          f.url &&
+                          window.open(f.url, "_blank", "noopener,noreferrer")
+                        }
                         disabled={!f.url}
-                        className="text-gray-500 hover:text-gray-700 min-h-[32px] touch-manipulation"
+                        className="text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 min-h-[44px] touch-manipulation px-3"
+                        style={{
+                          WebkitTapHighlightColor: "rgba(156, 163, 175, 0.1)",
+                          touchAction: "manipulation",
+                        }}
                         aria-label={`View ${f.name} on IPFS`}
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* zkTLS Conditions Dialog */}
       <Dialog open={zkConditionsOpen} onOpenChange={setZkConditionsOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-4xl max-h-[80vh] overflow-y-auto"
+          style={{
+            overscrollBehavior: "contain",
+          }}
+          aria-describedby="zk-conditions-description"
+        >
           <DialogHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+            <div
+              className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4"
+              aria-hidden="true"
+            >
               <Lock className="h-8 w-8 text-purple-600" />
             </div>
-            <DialogTitle className="text-2xl">Configure zkTLS Access Conditions</DialogTitle>
-            <DialogDescription className="text-base">
-              Define zero-knowledge proof conditions that users must satisfy to access this encrypted file.
-              <br />
-              <span className="text-sm text-muted-foreground">
-                Users will need to provide proofs from Reclaim Protocol to meet these conditions.
-              </span>
+            <DialogTitle className="text-2xl">
+              Configure Access Conditions
+            </DialogTitle>
+            <DialogDescription
+              id="zk-conditions-description"
+              className="text-base"
+            >
+              Define zero-knowledge proof conditions for file access.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">How zkTLS Works</h4>
+              <h4 className="font-semibold text-blue-900 mb-2">How it works</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Users generate zero-knowledge proofs using Reclaim Protocol</li>
-                <li>• Proofs verify specific attributes without revealing personal data</li>
-                <li>• Only users meeting your conditions can decrypt and access the file</li>
+                <li>
+                  • Users provide zero-knowledge proofs via Reclaim Protocol
+                </li>
+                <li>• Only users meeting conditions can decrypt files</li>
               </ul>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Access Conditions</h3>
-                <Badge variant="outline" className="text-purple-600 border-purple-200">
-                  {zkConditions.length} condition{zkConditions.length !== 1 ? 's' : ''}
+                <Badge
+                  variant="outline"
+                  className="text-purple-600 border-purple-200"
+                >
+                  {zkConditions.length} condition
+                  {zkConditions.length !== 1 ? "s" : ""}
                 </Badge>
               </div>
-              
+
               {zkConditions.map((condition, index) => (
-                <div key={condition.id} className="border-2 border-gray-200 rounded-xl p-6 bg-white">
+                <div
+                  key={condition.id}
+                  className="border-2 border-gray-200 rounded-xl p-6 bg-white"
+                >
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium text-gray-900">Condition #{index + 1}</h4>
+                    <h4 className="font-medium text-gray-900">
+                      Condition #{index + 1}
+                    </h4>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -728,25 +883,60 @@ export default function UploadPage() {
                       Remove
                     </Button>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Attribute</Label>
+                      <Label
+                        htmlFor={`method-${condition.id}`}
+                        className="text-sm font-medium"
+                      >
+                        Attribute
+                      </Label>
                       <Input
-                        placeholder="e.g., City, Age, Country, EmailDomain"
+                        id={`method-${condition.id}`}
+                        name={`method-${condition.id}`}
+                        placeholder="e.g., City, Age, Country, EmailDomain…"
                         value={condition.method}
-                        onChange={(e) => updateCondition(condition.id, 'method', e.target.value)}
-                        className="h-10"
+                        onChange={(e) =>
+                          updateCondition(
+                            condition.id,
+                            "method",
+                            e.target.value
+                          )
+                        }
+                        className="h-10 min-h-[44px]"
+                        autoComplete="off"
+                        style={{ fontSize: "16px" }}
                       />
-                      <p className="text-xs text-gray-500">The data attribute to verify</p>
+                      <p className="text-xs text-gray-500">
+                        The data attribute to verify
+                      </p>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Operator</Label>
+                      <Label
+                        htmlFor={`comparator-${condition.id}`}
+                        className="text-sm font-medium"
+                      >
+                        Operator
+                      </Label>
                       <select
-                        className="w-full h-10 px-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        id={`comparator-${condition.id}`}
+                        name={`comparator-${condition.id}`}
+                        className="w-full h-10 min-h-[44px] px-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent touch-manipulation"
+                        style={{
+                          fontSize: "16px",
+                          WebkitTapHighlightColor: "rgba(168, 85, 247, 0.1)",
+                          touchAction: "manipulation",
+                        }}
                         value={condition.returnValueTest.comparator}
-                        onChange={(e) => updateCondition(condition.id, 'comparator', e.target.value)}
+                        onChange={(e) =>
+                          updateCondition(
+                            condition.id,
+                            "comparator",
+                            e.target.value
+                          )
+                        }
                       >
                         <option value="==">Equals (=)</option>
                         <option value="!=">Not Equals (≠)</option>
@@ -755,18 +945,33 @@ export default function UploadPage() {
                         <option value=">=">Greater or Equal (≥)</option>
                         <option value="<=">Less or Equal (≤)</option>
                       </select>
-                      <p className="text-xs text-gray-500">Comparison operator</p>
+                      <p className="text-xs text-gray-500">
+                        Comparison operator
+                      </p>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Expected Value</Label>
+                      <Label
+                        htmlFor={`value-${condition.id}`}
+                        className="text-sm font-medium"
+                      >
+                        Expected Value
+                      </Label>
                       <Input
-                        placeholder="e.g., New York, 18, United States"
+                        id={`value-${condition.id}`}
+                        name={`value-${condition.id}`}
+                        placeholder="e.g., New York, 18, United States…"
                         value={condition.returnValueTest.value}
-                        onChange={(e) => updateCondition(condition.id, 'value', e.target.value)}
-                        className="h-10"
+                        onChange={(e) =>
+                          updateCondition(condition.id, "value", e.target.value)
+                        }
+                        className="h-10 min-h-[44px]"
+                        autoComplete="off"
+                        style={{ fontSize: "16px" }}
                       />
-                      <p className="text-xs text-gray-500">The value to match against</p>
+                      <p className="text-xs text-gray-500">
+                        The value to match against
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -774,35 +979,53 @@ export default function UploadPage() {
               <Button
                 variant="outline"
                 onClick={addCondition}
-                className="w-full h-12 border-2 border-dashed border-purple-300 text-purple-600 hover:bg-purple-50 hover:border-purple-400"
+                className="w-full h-12 min-h-[44px] border-2 border-dashed border-purple-300 text-purple-600 hover:bg-purple-50 hover:border-purple-400 touch-manipulation"
+                style={{
+                  WebkitTapHighlightColor: "rgba(168, 85, 247, 0.1)",
+                  touchAction: "manipulation",
+                }}
               >
-                <Lock className="mr-2 h-4 w-4" />
-                Add Another Condition
+                <Lock className="mr-2 h-4 w-4" aria-hidden="true" />
+                Add Condition
               </Button>
             </div>
-            
+
             <div className="flex gap-3 pt-4 border-t">
               <Button
                 onClick={applyZkConditions}
                 disabled={applyingConditions || !selectedFileForConditions}
-                className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold"
+                className="flex-1 min-h-[44px] bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold touch-manipulation"
+                style={{
+                  WebkitTapHighlightColor: "rgba(168, 85, 247, 0.1)",
+                  touchAction: "manipulation",
+                }}
               >
                 {applyingConditions ? (
                   <>
-                    <div className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Applying zkTLS Conditions...
+                    <Loader2
+                      className="mr-3 h-5 w-5 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Apply Conditions
+                    <span className="sr-only">
+                      Applying conditions, please wait
+                    </span>
                   </>
                 ) : (
                   <>
-                    <Lock className="mr-3 h-5 w-5" />
-                    Apply zkTLS Conditions
+                    <Lock className="mr-3 h-5 w-5" aria-hidden="true" />
+                    Apply Conditions
                   </>
                 )}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setZkConditionsOpen(false)}
-                className="h-12 px-6"
+                className="min-h-[44px] px-6 touch-manipulation"
+                style={{
+                  WebkitTapHighlightColor: "rgba(156, 163, 175, 0.1)",
+                  touchAction: "manipulation",
+                }}
               >
                 Cancel
               </Button>
@@ -813,42 +1036,59 @@ export default function UploadPage() {
 
       {/* zkTLS Proof Verification Dialog */}
       <Dialog open={zkProofDialog} onOpenChange={setZkProofDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-3xl max-h-[80vh] overflow-y-auto"
+          style={{
+            overscrollBehavior: "contain",
+          }}
+          aria-describedby="zk-proof-description"
+        >
           <DialogHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <div
+              className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4"
+              aria-hidden="true"
+            >
               <Key className="h-8 w-8 text-green-600" />
             </div>
-            <DialogTitle className="text-2xl">Access File with zkTLS Proof</DialogTitle>
-            <DialogDescription className="text-base">
-              Provide your zero-knowledge proof from Reclaim Protocol to decrypt and access this file.
-              <br />
-              <span className="text-sm text-muted-foreground">
-                Your proof will be verified against the access conditions set by the file owner.
-              </span>
+            <DialogTitle className="text-2xl">Access with Proof</DialogTitle>
+            <DialogDescription id="zk-proof-description" className="text-base">
+              Provide your zero-knowledge proof to decrypt this file.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-semibold text-green-900 mb-2">How to Get Your Proof</h4>
+              <h4 className="font-semibold text-green-900 mb-2">
+                How to Get Your Proof
+              </h4>
               <ol className="text-sm text-green-800 space-y-1 list-decimal list-inside">
-                <li>Visit <a href="https://reclaimprotocol.org" target="_blank" rel="noopener noreferrer" className="underline">Reclaim Protocol</a> to generate your proof</li>
-                <li>Connect your wallet and select the required data sources</li>
-                <li>Generate a zero-knowledge proof for the required attributes</li>
-                <li>Copy the JSON proof and paste it below</li>
+                <li>
+                  Visit{" "}
+                  <a
+                    href="https://reclaimprotocol.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Reclaim Protocol
+                  </a>
+                </li>
+                <li>Generate a zero-knowledge proof</li>
+                <li>Copy and paste the JSON proof below</li>
               </ol>
             </div>
 
             <div className="space-y-4">
               <div>
                 <Label htmlFor="zkProof" className="text-base font-semibold">
-                  zkTLS Proof (JSON Format)
+                  zkTLS Proof (JSON)
                 </Label>
                 <p className="text-sm text-gray-600 mb-2">
-                  Paste your complete proof JSON from Reclaim Protocol
+                  Paste your proof JSON from Reclaim Protocol
                 </p>
                 <Textarea
                   id="zkProof"
+                  name="zkProof"
                   placeholder='{
   "claimData": {
     "provider": "google-login",
@@ -861,30 +1101,46 @@ export default function UploadPage() {
                   value={zkProof}
                   onChange={(e) => setZkProof(e.target.value)}
                   rows={12}
-                  className="font-mono text-sm border-2 focus:border-green-500 focus:ring-green-500"
+                  className="font-mono text-sm border-2 focus:border-green-500 focus:ring-green-500 min-h-[300px]"
+                  style={{ fontSize: "16px" }}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  The proof should contain claimData, signature, and sessionId fields
+                  JSON should contain claimData, signature, and sessionId
                 </p>
               </div>
-              
+
               <div className="flex gap-3">
                 <Button
                   onClick={verifyAndDecrypt}
-                  disabled={verifyingProof || !zkProof.trim() || !selectedFileForAccess}
-                  className="flex-1 h-12 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold"
+                  disabled={
+                    verifyingProof || !zkProof.trim() || !selectedFileForAccess
+                  }
+                  className="flex-1 min-h-[44px] bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold touch-manipulation"
+                  style={{
+                    WebkitTapHighlightColor: "rgba(34, 197, 94, 0.1)",
+                    touchAction: "manipulation",
+                  }}
                 >
                   {verifyingProof ? (
                     <>
-                      <div className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Verifying Proof & Decrypting...
+                      <Loader2
+                        className="mr-3 h-5 w-5 animate-spin"
+                        aria-hidden="true"
+                      />
+                      Verify & Decrypt
+                      <span className="sr-only">
+                        Verifying proof and decrypting file, please wait
+                      </span>
                     </>
                   ) : (
                     <>
-                      <Key className="mr-3 h-5 w-5" />
-                      Verify Proof & Decrypt File
+                      <Key className="mr-3 h-5 w-5" aria-hidden="true" />
+                      Verify & Decrypt
                     </>
                   )}
+                
                 </Button>
                 <Button
                   variant="outline"
@@ -892,7 +1148,11 @@ export default function UploadPage() {
                     setZkProofDialog(false);
                     setZkProof("");
                   }}
-                  className="h-12 px-6"
+                  className="min-h-[44px] px-6 touch-manipulation"
+                  style={{
+                    WebkitTapHighlightColor: "rgba(156, 163, 175, 0.1)",
+                    touchAction: "manipulation",
+                  }}
                 >
                   Cancel
                 </Button>
