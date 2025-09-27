@@ -9,15 +9,15 @@ import LoginButton from "./connect-wallet"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  
+
   const navLink = cn(
     "text-sm text-muted-foreground hover:text-foreground transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:rounded-sm",
     "min-h-[44px] flex items-center px-2 -mx-2" // Ensure 44px touch target
   )
-  
+
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
-  
+
   return (
     <header
       className={cn(
@@ -26,12 +26,12 @@ export default function Navbar() {
         "border border-border/20 rounded-full shadow-lg"
       )}
     >
-      <nav 
+      <nav
         className="mx-auto flex h-12 items-center justify-between px-6"
         aria-label="Main navigation"
       >
-        <Link 
-          href="/" 
+        <Link
+          href="/"
           className="font-semibold tracking-tight text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:rounded-sm min-h-[44px] flex items-center"
         >
           <span className="sr-only">DataChain AI - Home</span>
@@ -41,22 +41,22 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/upload" className={navLink}>
-              Upload
-            </Link>
             <Link href="/mint" className={navLink}>
-              Mint&nbsp;NFT
-            </Link>
-            <Link href="/my-datasets" className={navLink}>
-              My&nbsp;Datasets
+              Create&nbsp;Agent
             </Link>
             <Link href="/explore" className={navLink}>
               Explore
             </Link>
+            <Link href="/my-datasets" className={navLink}>
+              My&nbsp;Agents
+            </Link>
+            <Link href="/upload" className={navLink}>
+              Upload
+            </Link>
           </div>
-          
+
           <LoginButton />
-          
+
           {/* Mobile menu button */}
           <Button
             variant="ghost"
@@ -78,7 +78,7 @@ export default function Navbar() {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div 
+        <div
           id="mobile-menu"
           className="md:hidden mt-2 border border-border/20 rounded-xl 
                      bg-background/20 backdrop-blur-md supports-[backdrop-filter]:bg-background/10 
@@ -86,33 +86,33 @@ export default function Navbar() {
           style={{ overscrollBehavior: 'contain' }}
         >
           <div className="flex flex-col space-y-2 px-4 py-4">
-            <Link 
-              href="/upload" 
+            <Link
+              href="/mint"
               className={cn(navLink, "justify-start w-full")}
               onClick={() => setIsMenuOpen(false)}
             >
-              Upload
+              Create Agent
             </Link>
-            <Link 
-              href="/mint" 
-              className={cn(navLink, "justify-start w-full")}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Mint NFT
-            </Link>
-            <Link 
-              href="/my-datasets" 
-              className={cn(navLink, "justify-start w-full")}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              My Datasets
-            </Link>
-            <Link 
-              href="/explore" 
+            <Link
+              href="/explore"
               className={cn(navLink, "justify-start w-full")}
               onClick={() => setIsMenuOpen(false)}
             >
               Explore
+            </Link>
+            <Link
+              href="/my-datasets"
+              className={cn(navLink, "justify-start w-full")}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              My Agents
+            </Link>
+            <Link
+              href="/upload"
+              className={cn(navLink, "justify-start w-full")}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Upload
             </Link>
           </div>
         </div>

@@ -1,0 +1,352 @@
+import { useState, useCallback, useEffect } from 'react';
+import { ethers } from 'ethers';
+import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
+import { AI_AGENT_BATCH_NFT_ABI, CONTRACT_ADDRESSES, CHAIN_ID, AgentParams, AgentData } from './aiAgentNFT';
+
+export const useContract = () => {
+    const account = useActiveAccount();
+    const wallet = useActiveWallet();
+    const [contract, setContract] = useState<ethers.Contract | null>(null);
+    const [signer, setSigner] = useState<ethers.Signer | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const isConnected = !!account;
+    const accountAddress = account?.address || '';
+
+    const connectWallet = useCallback(async () => {
+        if (!window.ethereum) {
+            throw new Error('MetaMask is not installed');
+        }
+
+        try {
+            setIsLoading(true);
+            const provider = new ethers.BrowserProvider(window.ethereum);
+
+            // Request account access
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+            // Check if we're on the correct network (Sepolia)
+            const network = await provider.getNetwork();
+            if (network.chainId !== BigInt(CHAIN_ID)) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
+                    });
+                } catch (switchError: unknown) {
+                    // This error code indicates that the chain has not been added to MetaMask
+                    if (switchError && typeof switchError === 'object' && 'code' in switchError && switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [
+                                {
+                                    chainId: `0x${CHAIN_ID.toString(16)}`,
+                                    chainName: 'Sepolia Testnet',
+                                    nativeCurrency: {
+                                        name: 'ETH',
+                                        symbol: 'ETH',
+                                        decimals: 18,
+                                    },
+                                    rpcUrls: ['https://sepolia.infura.io/v3/'],
+                                    blockExplorerUrls: ['https://sepolia.etherscan.io/'],
+                                },
+                            ],
+                        });
+                    }
+                }
+            }
+
+            const signer = await provider.getSigner();
+            const address = await signer.getAddress();
+
+            const contract = new ethers.Contract(
+                CONTRACT_ADDRESSES.AIAgentBatchNFT,
+                AI_AGENT_BATCH_NFT_ABI,
+                signer
+            );
+
+            setSigner(signer);
+            setContract(contract);
+            setAccount(address);
+            setIsConnected(true);
+        } catch (error) {
+            console.error('Failed to connect wallet:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const disconnectWallet = useCallback(() => {
+        setContract(null);
+        setSigner(null);
+        setAccount('');
+        setIsConnected(false);
+    }, []);
+
+    // Listen for account changes
+    useEffect(() => {
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts: string[]) => {
+                if (accounts.length === 0) {
+                    disconnectWallet();
+                } else {
+                    setAccount(accounts[0]);
+                }
+            });
+
+            window.ethereum.on('chainChanged', () => {
+                window.location.reload();
+            });
+        }
+
+        return () => {
+            if (window.ethereum) {
+                window.ethereum.removeAllListeners();
+            }
+        };
+    }, [disconnectWallet]);
+
+    return {
+        contract,
+        signer,
+        account,
+        isConnected,
+        isLoading,
+        connectWallet,
+        disconnectWallet,
+    };
+};
+
+export const useAIAgentContract = () => {
+    const { contract, account, isConnected, connectWallet, disconnectWallet, isLoading } = useContract();
+    const [transactionLoading, setTransactionLoading] = useState(false);
+
+    const createAgent = useCallback(async (params: AgentParams, initialMint: number = 0) => {
+        if (!contract || !isConnected) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            setTransactionLoading(true);
+
+            // Get minting fee
+            const mintingFee = await contract.mintingFee();
+
+            const tx = await contract.createAgent(params, initialMint, {
+                value: mintingFee
+            });
+
+            const receipt = await tx.wait();
+
+            // Extract token ID from events
+            const createdEvent = receipt.logs.find((log: ethers.Log) => {
+                try {
+                    const parsed = contract.interface.parseLog(log);
+                    return parsed?.name === 'AgentCreated';
+                } catch {
+                    return false;
+                }
+            });
+
+            let tokenId = null;
+            if (createdEvent) {
+                const parsed = contract.interface.parseLog(createdEvent);
+                tokenId = parsed?.args.tokenId.toString();
+            }
+
+            return { receipt, tokenId };
+        } catch (error) {
+            console.error('Error creating agent:', error);
+            throw error;
+        } finally {
+            setTransactionLoading(false);
+        }
+    }, [contract, isConnected]);
+
+    const mintAgent = useCallback(async (tokenId: number, amount: number, to?: string) => {
+        if (!contract || !isConnected) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            setTransactionLoading(true);
+
+            // Get agent data to calculate cost
+            const agentData = await contract.getAgent(tokenId);
+            const mintPrice = agentData.minting.mintPrice;
+            const totalCost = mintPrice * BigInt(amount);
+
+            const tx = await contract.mintAgent(tokenId, amount, to || account, {
+                value: totalCost
+            });
+
+            const receipt = await tx.wait();
+            return receipt;
+        } catch (error) {
+            console.error('Error minting agent:', error);
+            throw error;
+        } finally {
+            setTransactionLoading(false);
+        }
+    }, [contract, isConnected, account]);
+
+    const getAgent = useCallback(async (tokenId: number): Promise<AgentData> => {
+        if (!contract) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            const result = await contract.getAgent(tokenId);
+            return {
+                core: result.core,
+                metrics: result.metrics,
+                minting: result.minting,
+                tags: result.tags,
+            };
+        } catch (error) {
+            console.error('Error getting agent:', error);
+            throw error;
+        }
+    }, [contract]);
+
+    const getAgentsByCreator = useCallback(async (creator: string): Promise<string[]> => {
+        if (!contract) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            const tokenIds = await contract.getAgentsByCreator(creator);
+            return tokenIds.map((id: bigint) => id.toString());
+        } catch (error) {
+            console.error('Error getting agents by creator:', error);
+            throw error;
+        }
+    }, [contract]);
+
+    const getTotalAgentTypes = useCallback(async (): Promise<string> => {
+        if (!contract) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            const total = await contract.totalAgentTypes();
+            return total.toString();
+        } catch (error) {
+            console.error('Error getting total agent types:', error);
+            throw error;
+        }
+    }, [contract]);
+
+    const getBalanceOf = useCallback(async (account: string, tokenId: number): Promise<string> => {
+        if (!contract) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            const balance = await contract.balanceOf(account, tokenId);
+            return balance.toString();
+        } catch (error) {
+            console.error('Error getting balance:', error);
+            throw error;
+        }
+    }, [contract]);
+
+    const updateAgent = useCallback(async (
+        tokenId: number,
+        name: string,
+        description: string,
+        mintPrice: bigint,
+        allowPublicMint: boolean
+    ) => {
+        if (!contract || !isConnected) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            setTransactionLoading(true);
+
+            const tx = await contract.updateAgent(tokenId, name, description, mintPrice, allowPublicMint);
+            const receipt = await tx.wait();
+            return receipt;
+        } catch (error) {
+            console.error('Error updating agent:', error);
+            throw error;
+        } finally {
+            setTransactionLoading(false);
+        }
+    }, [contract, isConnected]);
+
+    const toggleAgentStatus = useCallback(async (tokenId: number) => {
+        if (!contract || !isConnected) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            setTransactionLoading(true);
+
+            const tx = await contract.toggleAgentStatus(tokenId);
+            const receipt = await tx.wait();
+            return receipt;
+        } catch (error) {
+            console.error('Error toggling agent status:', error);
+            throw error;
+        } finally {
+            setTransactionLoading(false);
+        }
+    }, [contract, isConnected]);
+
+    const setAgentTags = useCallback(async (tokenId: number, tags: string[]) => {
+        if (!contract || !isConnected) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            setTransactionLoading(true);
+
+            const tx = await contract.setAgentTags(tokenId, tags);
+            const receipt = await tx.wait();
+            return receipt;
+        } catch (error) {
+            console.error('Error setting agent tags:', error);
+            throw error;
+        } finally {
+            setTransactionLoading(false);
+        }
+    }, [contract, isConnected]);
+
+    const isHashUsed = useCallback(async (hash: string): Promise<boolean> => {
+        if (!contract) {
+            throw new Error('Contract not connected');
+        }
+
+        try {
+            return await contract.isHashUsed(hash);
+        } catch (error) {
+            console.error('Error checking hash:', error);
+            throw error;
+        }
+    }, [contract]);
+
+    return {
+        // Connection
+        account,
+        isConnected,
+        isLoading,
+        transactionLoading,
+        connectWallet,
+        disconnectWallet,
+
+        // Contract functions
+        createAgent,
+        mintAgent,
+        getAgent,
+        getAgentsByCreator,
+        getTotalAgentTypes,
+        getBalanceOf,
+        updateAgent,
+        toggleAgentStatus,
+        setAgentTags,
+        isHashUsed,
+    };
+};

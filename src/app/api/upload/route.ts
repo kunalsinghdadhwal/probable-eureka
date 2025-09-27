@@ -47,8 +47,9 @@ export const POST = async (req: NextRequest) => {
                 console.warn("Failed to clean up temp file:", cleanupError);
             }
         }
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Upload error:", err);
-        return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
+        const errorMessage = err instanceof Error ? err.message : "Upload failed";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 };

@@ -4,27 +4,19 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   useActiveWallet,
   useActiveAccount,
-  ConnectButton,
 } from "thirdweb/react";
-import { client } from "@/lib/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +31,7 @@ import {
   ExternalLink,
   Lock,
   Key,
-  Eye,
+
   Settings,
   Loader2,
 } from "lucide-react";
@@ -109,7 +101,7 @@ export default function UploadPage() {
       await navigator.clipboard.writeText(text);
       setSuccess("Hash copied to clipboard!");
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
+    } catch {
       // Fallback for older browsers
       try {
         const textArea = document.createElement("textarea");
@@ -120,7 +112,7 @@ export default function UploadPage() {
         document.body.removeChild(textArea);
         setSuccess("Hash copied to clipboard!");
         setTimeout(() => setSuccess(null), 3000);
-      } catch (fallbackErr) {
+      } catch {
         setError("Failed to copy to clipboard. Please copy manually.");
         setTimeout(() => setError(null), 5000);
       }
@@ -129,7 +121,6 @@ export default function UploadPage() {
 
   // Focus management for errors with better UX
   const errorRef = useRef<HTMLDivElement>(null);
-  const firstErrorFieldRef = useRef<HTMLInputElement>(null);
   const uploadButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -177,7 +168,8 @@ export default function UploadPage() {
       const signature = await account.signMessage({ message: data.message });
       return { signature, signerAddress: account.address };
     } catch (err) {
-      console.error("Signing error:", err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown signing error';
+      console.error("Signing error:", errorMessage);
       return null;
     }
   };
@@ -215,7 +207,7 @@ export default function UploadPage() {
           setUploadProgress(Math.round((e.loaded / e.total) * 100));
       };
 
-      const uploadResult: any = await new Promise((resolve, reject) => {
+      const uploadResult: { hash: string; name?: string; size?: number; url: string; decryptUrl: string } = await new Promise((resolve, reject) => {
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             const result = JSON.parse(xhr.responseText);
@@ -245,9 +237,10 @@ export default function UploadPage() {
       setSuccess("File uploaded successfully!");
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Upload error:", err);
-      setError(err.message);
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed';
+      setError(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -291,9 +284,10 @@ export default function UploadPage() {
       } else {
         throw new Error(result.error || "Failed to apply conditions");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Apply conditions error:", err);
-      setError(err.message);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to apply conditions';
+      setError(errorMessage);
     } finally {
       setApplyingConditions(false);
     }
@@ -349,9 +343,10 @@ export default function UploadPage() {
       } else {
         throw new Error(result.error || "Failed to verify proof");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Verify proof error:", err);
-      setError(err.message);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to verify proof';
+      setError(errorMessage);
     } finally {
       setVerifyingProof(false);
     }
@@ -677,11 +672,10 @@ export default function UploadPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
                       <div
-                        className={`p-3 rounded-xl backdrop-blur-sm shadow-lg border ${
-                          f.hasZkConditions
+                        className={`p-3 rounded-xl backdrop-blur-sm shadow-lg border ${f.hasZkConditions
                             ? "bg-green-800/40 border-green-600/50"
                             : "bg-blue-800/40 border-blue-600/50"
-                        }`}
+                          }`}
                         aria-hidden="true"
                       >
                         {f.hasZkConditions ? (
@@ -754,11 +748,10 @@ export default function UploadPage() {
                           setZkConditionsOpen(true);
                         }}
                         disabled={!account}
-                        className={`${
-                          f.hasZkConditions
+                        className={`${f.hasZkConditions
                             ? "bg-green-700 hover:bg-green-800 text-green-100 border border-green-600/50"
                             : "border-blue-600/50 text-blue-300 hover:bg-blue-900/30 hover:border-blue-500/50"
-                        } min-h-[44px] touch-manipulation px-4`}
+                          } min-h-[44px] touch-manipulation px-4`}
                         style={{
                           WebkitTapHighlightColor: f.hasZkConditions
                             ? "rgba(34, 197, 94, 0.1)"
@@ -1140,7 +1133,7 @@ export default function UploadPage() {
                       Verify & Decrypt
                     </>
                   )}
-                
+
                 </Button>
                 <Button
                   variant="outline"
