@@ -1,7 +1,51 @@
 {
-  "name": "hardhat-project",
+  "name": "ai-agent-nft-contracts",
+  "version": "1.0.0",
+  "description": "Modular AI Agent NFT Smart Contracts",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat ignition deploy ignition/modules/AIAgent.js",
+    "deploy:local": "hardhat ignition deploy ignition/modules/AIAgent.js --network localhost",
+    "deploy:sepolia": "hardhat ignition deploy ignition/modules/AIAgent.js --network sepolia",
+    "deploy:mainnet": "hardhat ignition deploy ignition/modules/AIAgent.js --network mainnet",
+    "build": "hardhat compile",
+    "clean": "hardhat clean"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
-    "hardhat": "^2.26.3"
-  }
+    "@nomicfoundation/hardhat-ignition": "^0.15.13",
+    "hardhat": "^2.26.3",
+    "chai": "^4.3.7",
+    "ethers": "^6.0.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.0"
+  },
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "nft",
+    "ai",
+    "agent",
+    "smart-contracts",
+    "hardhat",
+    "solidity"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/ai-agent-nft-contracts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/ai-agent-nft-contracts/issues"
+  },
+  "homepage": "https://github.com/your-username/ai-agent-nft-contracts#readme"
 }
