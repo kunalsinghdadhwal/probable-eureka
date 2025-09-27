@@ -18,21 +18,17 @@ export const LoginButton = () => {
   const chain = useActiveWalletChain();
   const wallet = useActiveWallet();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Auto-authenticate when wallet connects
   useEffect(() => {
     const handleAutoAuth = async () => {
-      if (account && chain && !isAuthenticated && !isAuthenticating) {
-        setIsAuthenticating(true);
-        
+      if (account && chain && !isAuthenticated) {
         try {
           // Check if already logged in
           const alreadyLoggedIn = await isLoggedIn();
           if (alreadyLoggedIn) {
             setIsAuthenticated(true);
-            setIsAuthenticating(false);
             return;
           }
 
@@ -65,18 +61,15 @@ export const LoginButton = () => {
           }
         } catch (error) {
           console.error("Auto-authentication error:", error);
-        } finally {
-          setIsAuthenticating(false);
         }
       } else if (!account) {
         // Reset auth state when wallet disconnects
         setIsAuthenticated(false);
-        setIsAuthenticating(false);
       }
     };
 
     handleAutoAuth();
-  }, [account, chain, isAuthenticated, isAuthenticating]);
+  }, [account, chain, isAuthenticated]);
 
   const handleLogout = async () => {
     if (isSigningOut) return; // Prevent multiple sign out attempts
@@ -93,7 +86,6 @@ export const LoginButton = () => {
       
       // Reset local state
       setIsAuthenticated(false);
-      setIsAuthenticating(false);
       
       console.log("Successfully signed out and disconnected wallet");
     } catch (error) {
@@ -110,9 +102,13 @@ export const LoginButton = () => {
         client={client}
         theme="dark"
         connectModal={{
-          size: "wide",
+          size: "compact",
           title: "Connect to DataChain AI",
           showThirdwebBranding: false,
+        }}
+        connectButton={{
+          label: "Connect",
+          className: "min-h-[32px] px-2 py-0.5 text-sm h-9 min-w-[120px]"
         }}
         wallets={[
           createWallet("io.metamask"),
@@ -123,26 +119,15 @@ export const LoginButton = () => {
     );
   }
 
-  // If wallet is connected but still authenticating
-  if (account && !isAuthenticated && isAuthenticating) {
-    return (
-      <Button
-        disabled
-        className="min-h-[44px] shadow-sm ring-1 ring-primary/40"
-      >
-        Authenticating...
-      </Button>
-    );
-  }
-
-  // If wallet is connected and authenticated
+  // If wallet is connected and authenticated (removed authenticating state)
   return (
     <div className="flex items-center gap-2">
       <Button
         onClick={handleLogout}
         disabled={isSigningOut}
         variant="outline"
-        className="min-h-[44px]"
+        size="sm"
+        className="min-h-[32px] px-3 py-1 text-sm"
       >
         {isSigningOut ? "Signing Out..." : "Sign Out"}
       </Button>
@@ -154,6 +139,7 @@ export const LoginButton = () => {
           displayBalanceToken: {
             [1]: "0xA0b86a33E6441e35b9eCC21B2Dc7b8E76A84B1E4",
           },
+          className: "min-h-[32px] px-3 py-1 text-sm",
         }}
       />
     </div>

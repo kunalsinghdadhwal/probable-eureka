@@ -60,19 +60,35 @@ export default function RootLayout({
       </head>
         <Providers>
       <body 
-        className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}
+        className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased relative`}
         style={{ 
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent'
         }}
         >
+        
+        {/* Global background image for all pages */}
+        <div 
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
+          style={{
+            backgroundImage: 'url(/bg.jpg)',
+          }}
+          aria-hidden="true"
+        />
+        
+        {/* Global overlay for text readability */}
+        <div 
+          className="fixed inset-0 bg-background/20 dark:bg-background/40 -z-10"
+          aria-hidden="true" 
+        />
+
         <Suspense fallback={
-          <div className="flex items-center justify-center min-h-screen">
+          <div className="flex items-center justify-center min-h-screen relative z-10">
             <div className="animate-pulse">Loading DataChain AI…</div>
           </div>
         }>
           <Navbar />
-          <main id="main-content">
+          <main id="main-content" className="relative z-10">
             {children} 
           </main>
         </Suspense>

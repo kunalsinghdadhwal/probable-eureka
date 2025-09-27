@@ -21,12 +21,13 @@ export default function Navbar() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b border-border/40",
-        "bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/50",
+        "fixed top-4 left-4 right-4 z-50 mx-auto max-w-screen-xl",
+        "bg-background/20 backdrop-blur-md supports-[backdrop-filter]:bg-background/10",
+        "border border-border/20 rounded-full shadow-lg"
       )}
     >
       <nav 
-        className="mx-auto flex h-14 max-w-screen-xl items-center justify-between px-4"
+        className="mx-auto flex h-12 items-center justify-between px-6"
         aria-label="Main navigation"
       >
         <Link 
@@ -59,17 +60,17 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <Button
             variant="ghost"
-            size="icon"
-            className="md:hidden min-h-[44px] min-w-[44px]"
+            size="sm"
+            className="md:hidden min-h-[32px] min-w-[32px] p-1"
             onClick={toggleMenu}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
           >
             {isMenuOpen ? (
-              <X className="h-5 w-5" aria-hidden="true" />
+              <X className="h-4 w-4" aria-hidden="true" />
             ) : (
-              <Menu className="h-5 w-5" aria-hidden="true" />
+              <Menu className="h-4 w-4" aria-hidden="true" />
             )}
           </Button>
         </div>
@@ -79,7 +80,9 @@ export default function Navbar() {
       {isMenuOpen && (
         <div 
           id="mobile-menu"
-          className="md:hidden border-t border-border/40 bg-background/95 backdrop-blur"
+          className="md:hidden mt-2 border border-border/20 rounded-xl 
+                     bg-background/20 backdrop-blur-md supports-[backdrop-filter]:bg-background/10 
+                     shadow-lg"
           style={{ overscrollBehavior: 'contain' }}
         >
           <div className="flex flex-col space-y-2 px-4 py-4">
@@ -111,12 +114,6 @@ export default function Navbar() {
             >
               Explore
             </Link>
-            <Button 
-              className="mt-4 shadow-sm ring-1 ring-primary/40 min-h-[44px] justify-start"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Connect Wallet
-            </Button>
           </div>
         </div>
       )}

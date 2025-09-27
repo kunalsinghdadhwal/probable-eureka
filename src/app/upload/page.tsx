@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   useActiveWallet,
   useActiveAccount,
@@ -41,6 +41,7 @@ import {
   Key,
   Eye,
   Settings,
+  Loader2,
 } from "lucide-react";
 
 interface UploadedFile {
@@ -94,16 +95,47 @@ export default function UploadPage() {
     }
   };
 
-  // Copy hash to clipboard
+  // Copy hash to clipboard with better feedback
   const copyToClipboard = async (text: string) => {
+    if (!text) return;
+    
     try {
       await navigator.clipboard.writeText(text);
       setSuccess("Hash copied to clipboard!");
-      setTimeout(() => setSuccess(null), 2000);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError("Failed to copy to clipboard");
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setSuccess("Hash copied to clipboard!");
+        setTimeout(() => setSuccess(null), 3000);
+      } catch (fallbackErr) {
+        setError("Failed to copy to clipboard. Please copy manually.");
+        setTimeout(() => setError(null), 5000);
+      }
     }
   };
+
+  // Focus management for errors
+  const errorRef = useRef<HTMLDivElement>(null);
+  const firstErrorFieldRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.focus();
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (error && !file && firstErrorFieldRef.current) {
+      firstErrorFieldRef.current.focus();
+    }
+  }, [error, file]);
 
   const signAuthMessage = async () => {
     if (!account) return null;
@@ -336,9 +368,18 @@ export default function UploadPage() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-16">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+    <main className="mx-auto max-w-6xl px-6 py-16 pt-24">
+      {/* Skip to content link for screen readers */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 
+                   bg-primary text-primary-foreground px-4 py-2 rounded-md z-50"
+      >
+        Skip to main content
+      </a>
+
+      <div id="main-content" className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent scroll-margin-top-24">
           AI Dataset Storage with zkTLS
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
@@ -404,13 +445,20 @@ export default function UploadPage() {
                 id="file-upload"
                 type="file"
                 onChange={handleFileChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 
+                className="block w-full text-sm text-foreground 
+                  file:mr-4 file:py-3 file:px-6 file:min-h-[44px]
                   file:rounded-lg file:border-0 file:text-sm file:font-semibold 
                   file:bg-gradient-to-r file:from-blue-600 file:to-purple-600 file:text-white 
                   hover:file:from-blue-700 hover:file:to-purple-700 file:cursor-pointer
                   cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-8 text-center
-                  hover:border-blue-400 transition-colors"
+                  hover:border-blue-400 transition-colors
+                  focus-visible:outline-none focus-visible:ring-2 
+                  focus-visible:ring-ring focus-visible:ring-offset-2
+                  disabled:cursor-not-allowed disabled:opacity-50"
                 accept=".json,.csv,.txt,.zip,.tar.gz,.pkl,.h5,.pt,.pth"
+                disabled={uploading}
+                aria-describedby={file ? "file-selected" : "file-help"}
+                required
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
@@ -420,7 +468,7 @@ export default function UploadPage() {
               </div>
             </div>
             {file && (
-              <div className="flex items-center justify-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div id="file-selected" className="flex items-center justify-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
                 <File className="h-5 w-5 text-green-600" />
                 <span className="font-medium text-green-800">{file.name}</span>
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
@@ -431,32 +479,48 @@ export default function UploadPage() {
           </div>
 
           <div className="space-y-4">
-            <Button
-              onClick={uploadEncryptedFile}
-              disabled={!file || uploading}
-              className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              size="lg"
-            >
-              {uploading ? (
-                <>
-                  <div className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Encrypting & Uploading... {uploadProgress}%
-                </>
-              ) : (
-                <>
-                  <Shield className="mr-3 h-5 w-5" />
-                  Upload & Encrypt Dataset
-                </>
-              )}
-            </Button>
+            {!wallet || !account ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Please connect your wallet to upload files. Your wallet is used to sign and encrypt your data.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Button
+                onClick={uploadEncryptedFile}
+                disabled={!file || uploading}
+                className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 min-h-[44px] touch-manipulation"
+                size="lg"
+                type="button"
+                aria-describedby="upload-status"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="mr-3 h-5 w-5 animate-spin" aria-hidden="true" />
+                    Encrypting & Uploading... {uploadProgress}%
+                    <span className="sr-only">Upload in progress, {uploadProgress} percent complete</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="mr-3 h-5 w-5" aria-hidden="true" />
+                    Upload & Encrypt Dataset
+                  </>
+                )}
+              </Button>
+            )}
 
             {uploading && (
-              <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200" id="upload-status">
                 <div className="flex justify-between text-sm font-medium">
                   <span className="text-blue-800">Encryption & Upload Progress</span>
-                  <span className="text-blue-600">{uploadProgress}%</span>
+                  <span className="text-blue-600" aria-live="polite">{uploadProgress}%</span>
                 </div>
-                <Progress value={uploadProgress} className="w-full h-2" />
+                <Progress 
+                  value={uploadProgress} 
+                  className="w-full h-2" 
+                  aria-label={`Upload progress: ${uploadProgress}%`}
+                />
                 <p className="text-xs text-blue-600 text-center">
                   Your file is being encrypted and uploaded to IPFS via Lighthouse
                 </p>
@@ -465,15 +529,28 @@ export default function UploadPage() {
           </div>
 
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+            <Alert 
+              variant="destructive" 
+              ref={errorRef}
+              tabIndex={-1}
+              role="alert"
+              aria-live="polite"
+            >
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          
           {success && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">{success}</AlertDescription>
+            <Alert 
+              className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+              role="status"
+              aria-live="polite"
+            >
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" aria-hidden="true" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                {success}
+              </AlertDescription>
             </Alert>
           )}
         </CardContent>
@@ -488,17 +565,21 @@ export default function UploadPage() {
                 <File className="h-6 w-6 text-blue-600" />
               </div>
               Your Encrypted Datasets
+              <Badge variant="secondary" className="ml-auto">
+                {uploadedFiles.length}
+              </Badge>
             </CardTitle>
             <CardDescription className="text-base">
               Manage your encrypted datasets and configure zkTLS access conditions
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid gap-4">
+            <div className="grid gap-4" role="list" aria-label="Uploaded files">
               {uploadedFiles.map((f, index) => (
                 <div
-                  key={index}
+                  key={`${f.hash}-${index}`}
                   className="group relative rounded-xl border-2 p-6 hover:shadow-lg transition-all duration-200 bg-white"
+                  role="listitem"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
@@ -525,7 +606,9 @@ export default function UploadPage() {
                           )}
                         </div>
                         <p className="text-sm text-gray-600 mb-3">
-                          {f.size} • Uploaded {f.uploadedAt.toLocaleDateString()} at {f.uploadedAt.toLocaleTimeString()}
+                          {f.size} • <time dateTime={f.uploadedAt.toISOString()}>
+                            {f.uploadedAt.toLocaleString()}
+                          </time>
                         </p>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs font-mono">
@@ -535,10 +618,12 @@ export default function UploadPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => copyToClipboard(f.hash || '')}
-                            className="h-6 px-2 text-gray-500 hover:text-gray-700"
+                            className="h-6 px-2 text-gray-500 hover:text-gray-700 min-h-[32px] touch-manipulation"
                             disabled={!f.hash}
+                            aria-label={`Copy hash for ${f.name}`}
                           >
                             <Copy className="h-3 w-3" />
+                            <span className="sr-only">Copy hash</span>
                           </Button>
                         </div>
                       </div>
@@ -555,7 +640,7 @@ export default function UploadPage() {
                         className={`${f.hasZkConditions 
                           ? 'bg-green-600 hover:bg-green-700 text-white' 
                           : 'border-blue-300 text-blue-600 hover:bg-blue-50'
-                        }`}
+                        } min-h-[32px] touch-manipulation`}
                       >
                         <Settings className="mr-2 h-4 w-4" />
                         {f.hasZkConditions ? "Manage Access" : "Set zkTLS Access"}
@@ -569,7 +654,7 @@ export default function UploadPage() {
                             setZkProofDialog(true);
                           }}
                           disabled={!account}
-                          className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                          className="border-purple-300 text-purple-600 hover:bg-purple-50 min-h-[32px] touch-manipulation"
                         >
                           <Key className="mr-2 h-4 w-4" />
                           Access File
@@ -578,9 +663,10 @@ export default function UploadPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => f.url && window.open(f.url, "_blank")}
+                        onClick={() => f.url && window.open(f.url, "_blank", "noopener,noreferrer")}
                         disabled={!f.url}
-                        className="text-gray-500 hover:text-gray-700"
+                        className="text-gray-500 hover:text-gray-700 min-h-[32px] touch-manipulation"
+                        aria-label={`View ${f.name} on IPFS`}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
