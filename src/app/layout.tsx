@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: "Upload, prove, own, and license AI datasets on-chain with immutable Filecoin storage, zkTLS authenticity, and ERC-1155 NFT fractional ownership.",
   generator: "Team Probable Eureka",
   keywords: ["AI datasets", "blockchain", "Web3", "Filecoin", "zkTLS", "ERC-1155", "NFT", "licensing"],
-  authors: [{ name: "Team Probable Eureka" }],
+  authors: [{ name: "Team DataChain AI" }],
   openGraph: {
     title: "DataChain AI - License AI Datasets On-Chain",
     description: "Upload, prove, own, and license AI datasets on-chain with immutable storage and authenticity verification.",
