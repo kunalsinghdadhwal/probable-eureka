@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -13,7 +12,7 @@ export default function Navbar() {
   const navLink = cn(
     "text-sm text-muted-foreground hover:text-foreground transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:rounded-sm",
-    "min-h-[44px] flex items-center px-2 -mx-2" // Ensure 44px touch target
+    "min-h-[44px] flex items-center px-2 -mx-2"
   )
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
@@ -21,13 +20,14 @@ export default function Navbar() {
   return (
     <header
       className={cn(
-        "fixed top-4 left-4 right-4 z-50 mx-auto max-w-screen-xl",
+        // full width on small screens so nothing is clipped
+        "fixed top-2 left-0 right-0 z-50 md:top-4 md:left-4 md:right-4",
         "bg-background/20 backdrop-blur-md supports-[backdrop-filter]:bg-background/10",
-        "border border-border/20 rounded-full shadow-lg"
+        "border border-border/20 rounded-none md:rounded-full shadow-lg"
       )}
     >
       <nav
-        className="mx-auto flex h-12 items-center justify-between px-6"
+        className="flex w-full min-h-[52px] items-center justify-between px-3 sm:px-4 md:px-6"
         aria-label="Main navigation"
       >
         <Link
@@ -39,29 +39,21 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/mint" className={navLink}>
-              Create&nbsp;Agent
-            </Link>
-            <Link href="/explore" className={navLink}>
-              Explore
-            </Link>
-            <Link href="/my-datasets" className={navLink}>
-              My&nbsp;Agents
-            </Link>
-            <Link href="/upload" className={navLink}>
-              Upload
-            </Link>
+            <Link href="/mint" className={navLink}>Create&nbsp;Agent</Link>
+            <Link href="/explore" className={navLink}>Explore</Link>
+            <Link href="/my-datasets" className={navLink}>My&nbsp;Agents</Link>
+            <Link href="/upload" className={navLink}>Upload</Link>
           </div>
 
-          <LoginButton />
+          
 
           {/* Mobile menu button */}
           <Button
             variant="ghost"
             size="sm"
-            className="md:hidden min-h-[32px] min-w-[32px] p-1"
+            className="md:hidden min-h-[36px] min-w-[36px] p-1"
             onClick={toggleMenu}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
@@ -73,6 +65,7 @@ export default function Navbar() {
               <Menu className="h-4 w-4" aria-hidden="true" />
             )}
           </Button>
+          <LoginButton />
         </div>
       </nav>
 
@@ -80,38 +73,21 @@ export default function Navbar() {
       {isMenuOpen && (
         <div
           id="mobile-menu"
-          className="md:hidden mt-2 border border-border/20 rounded-xl 
-                     bg-background/20 backdrop-blur-md supports-[backdrop-filter]:bg-background/10 
-                     shadow-lg"
-          style={{ overscrollBehavior: 'contain' }}
+          className="md:hidden max-h-[80vh] overflow-y-auto mt-2 border border-border/20 rounded-xl
+                     bg-background/20 backdrop-blur-md supports-[backdrop-filter]:bg-background/10
+                     shadow-lg w-full"
         >
           <div className="flex flex-col space-y-2 px-4 py-4">
-            <Link
-              href="/mint"
-              className={cn(navLink, "justify-start w-full")}
-              onClick={() => setIsMenuOpen(false)}
-            >
+            <Link href="/mint" className={cn(navLink, "justify-start w-full")} onClick={() => setIsMenuOpen(false)}>
               Create Agent
             </Link>
-            <Link
-              href="/explore"
-              className={cn(navLink, "justify-start w-full")}
-              onClick={() => setIsMenuOpen(false)}
-            >
+            <Link href="/explore" className={cn(navLink, "justify-start w-full")} onClick={() => setIsMenuOpen(false)}>
               Explore
             </Link>
-            <Link
-              href="/my-datasets"
-              className={cn(navLink, "justify-start w-full")}
-              onClick={() => setIsMenuOpen(false)}
-            >
+            <Link href="/my-datasets" className={cn(navLink, "justify-start w-full")} onClick={() => setIsMenuOpen(false)}>
               My Agents
             </Link>
-            <Link
-              href="/upload"
-              className={cn(navLink, "justify-start w-full")}
-              onClick={() => setIsMenuOpen(false)}
-            >
+            <Link href="/upload" className={cn(navLink, "justify-start w-full")} onClick={() => setIsMenuOpen(false)}>
               Upload
             </Link>
           </div>

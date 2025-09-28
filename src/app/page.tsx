@@ -9,7 +9,7 @@ const verifyPayload: VerifyCommandInput = {
 	verification_level: VerificationLevel.Orb, // Orb | Device
 }
 
-const payload = MiniKit.commands.verify(verifyPayload)
+// const payload = MiniKit.commands.verify(verifyPayload)
 
 export default function Page() {
   const [isVerified, setIsVerified] = useState(false)
@@ -66,13 +66,19 @@ export default function Page() {
           style={{
             minWidth: 120,
             minHeight: 44,
-            fontSize: 18,
-            borderRadius: 8,
+            fontSize: 14,
+            borderRadius: 12,
             outline: "none",
-            border: "1px solid #ccc",
-            background: verifying ? "#eee" : "#fff",
+            border: "2px solid #bbb",
+            background: verifying ? "#f5f5f5" : "#fff",
+            color: "#222", // High contrast text
+            fontWeight: 600,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
             cursor: verifying ? "not-allowed" : "pointer",
-            position: "relative"
+            position: "relative",
+            transition: "background 0.15s, border-color 0.15s, box-shadow 0.15s",
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "rgba(0,0,0,0.08)",
           }}
           aria-busy={verifying}
           aria-label="Verify with World ID"
